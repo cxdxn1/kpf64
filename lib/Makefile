@@ -1,7 +1,7 @@
 cc = clang
 lib_dir = $(wildcard *.c)
 include_dir = -Iinclude
-lib = libkpf.a
+lib = libkpf64.a
 
 all: $(lib)
 

@@ -3,14 +3,14 @@ include_dir = src/include
 src_dir = $(wildcard src/*.c)
 
 lib_include_dir = lib/include
-lib = lib/libkpf.a
+lib = lib/libkpf64.a
 
-all: kpf
+all: kpf64
 
-kpf: $(src_dir) $(lib)
+kpf64: $(src_dir) $(lib)
 	$(cc) -g -I$(lib_include_dir) -I$(include_dir) -o $@ $(src_dir) $(lib)
 
 clean:
-	rm -f kpf
+	rm -f kpf64
 
 .PHONY: all clean

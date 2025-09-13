@@ -1,5 +1,5 @@
 .DS_Store
-kpf
+kpf64
 .vscode/
-kpf.dSYM/
-lib/libkpf.a
+kpf64.dSYM/
+lib/libkpf64.a
