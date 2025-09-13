@@ -2,5 +2,4 @@
 kpf
 .vscode/
 kpf.dSYM/
-kernelcache.release.iphone17,2.raw
-kernelcache.release.iphone6.raw
+lib/libkpf.a
