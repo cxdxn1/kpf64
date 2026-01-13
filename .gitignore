@@ -1,5 +1,6 @@
 .DS_Store
-kpf64
 .vscode/
+kpf64
 kpf64.dSYM/
-lib/libkpf64.a
+ida/
+prelink_info_formatted.plist

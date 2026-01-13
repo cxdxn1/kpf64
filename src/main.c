@@ -3,14 +3,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <macho.h>
-#include <patchfinder.h>
-#include <arm64.h>
+#include <lib/macho.h>
+#include <lib/patchfinder.h>
+#include <lib/arm64.h>
 
 #include <kernel.h>
+#include <patches/amfi.h>
 
-int open_kernelcache(const char* path, void** kernelOut, size_t* sizeOut, struct mach_header_64** headerOut) {
+static int open_kernelcache(const char* path, void** kernelOut, size_t* sizeOut, struct mach_header_64** headerOut) {
     FILE* fp = fopen(path, "rb");
     if (fp == NULL) return -1;
     fseek(fp, 0, SEEK_END);
@@ -45,7 +45,11 @@ int main(int argc, char** argv) {
 
     const char* arch = macho_get_arch(gKPF.kernelcache, gKPF.kernelHeader);
     uint32_t magic = macho_get_magic(gKPF.kernelcache);
-    printf("[*] MachO is %s\n", arch);
+    if(strcmp(arch, "Unknown") == 0 || magic != MH_MAGIC_64) {
+        printf("[*] Kernelcache is invalid or compressed, cannot continue");
+        return -1;
+    };
+    printf("[*] Kernelcache is %s\n", arch);
     printf("[*] Magic: 0x%x\n", magic);
     printf("[*] Number of load commands: %d\n", gKPF.kernelHeader->ncmds);
     
@@ -53,7 +57,7 @@ int main(int argc, char** argv) {
     if (macho_has_symtab(gKPF.kernelcache, &symtab) == true) {
         printf("[*] Found %u symbols\n", symtab.nsyms);
     } else {
-        printf("[!] Binary is stripped\n");
+        printf("[!] Kernelcache is stripped\n");
     }
 
     kernel_init_info();
@@ -61,13 +65,21 @@ int main(int argc, char** argv) {
     printf("[*] Found kernel __text section at 0x%llx\n", gKPF.kernelTextSection->addr);
     printf("[*] Found kernel __data section at 0x%llx\n", gKPF.kernelDataSection->addr);
     printf("[*] Found kernel __cstring section at 0x%llx\n", gKPF.kernelCstringSection->addr);
+    printf("[*] Found kernel __info section at 0x%llx\n", gKPF.kernelPrelinkInfoSection->addr);
     printf("[*] Found Darwin kernel version: %s\n", gKPF.darwinVersion);
     printf("[*] Found XNU version: %s\n", gKPF.xnuVersion);
 
-    uint64_t darwin_version_addr = pf_find_string(gKPF.kernelcache, "__TEXT", "__const", "Darwin Kernel Version");
-    uint64_t xref = pf_xref(gKPF.kernelcache, gKPF.kernelTextSection, darwin_version_addr);
-    if(xref == 0) return -1;
-    printf("[*] Found Darwin Kernel Version string ref at 0x%llx\n", xref);
+    void* darwin_version_addr = memmem(gKPF.kernelcache, gKPF.kernelSize, "Darwin Kernel Version", strlen("Darwin Kernel Version"));
+    uint64_t fileoff = (uint8_t*)darwin_version_addr - (uint8_t*)gKPF.kernelcache;
+    uint64_t va = macho_translate_fileoff_to_va(gKPF.kernelcache, fileoff);
+
+    // uint64_t xref = pf_xref64(gKPF.kernelcache, gKPF.kernelTextSection, va);
+    // if (xref == 0) return -1;
+    // printf("[*] Found Darwin Kernel Version string ref at 0x%llx\n", va); // 0xfffffff00701f648
+
+    printf("[*] Initialising amfiret patch...\n");
+    int patch = kernel_patch_amfiret();
+    //if(patch != 0) return -1;
 
     free(gKPF.kernelcache);
     gKPF.kernelcache = NULL;
