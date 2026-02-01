@@ -4,3 +4,5 @@ kpf64
 kpf64.dSYM/
 ida/
 prelink_info_formatted.plist
+kernelcache.release.iphone6.raw
+kernelcache.release.iphone6.patched

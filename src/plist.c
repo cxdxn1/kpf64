@@ -6,7 +6,7 @@
 
 #include <plist.h>
 
-uint64_t plist_parse_integer(void *key) {
+uint64_t plist_parse_integer(void* key) {
     char* key_value = strstr(key, "<integer");
     if (key_value != NULL) {
         key_value = strstr(key_value, ">");

@@ -6,37 +6,21 @@
 #include <lib/macho.h>
 #include <lib/patchfinder.h>
 #include <lib/arm64.h>
+#include <lib/file.h>
 
 #include <kernel.h>
 #include <patches/amfi.h>
 
-static int open_kernelcache(const char* path, void** kernelOut, size_t* sizeOut, struct mach_header_64** headerOut) {
-    FILE* fp = fopen(path, "rb");
-    if (fp == NULL) return -1;
-    fseek(fp, 0, SEEK_END);
-    size_t len = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    void* buf = malloc(len);
-    if (buf == NULL) return -1;
-    fread(buf, 1, len, fp);
-    fclose(fp);
-
-    *kernelOut = buf;
-    *sizeOut = len;
-    *headerOut = (struct mach_header_64*)buf;
-    return 0;
-}
-
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        printf("[*] Usage: %s <path to kernelcache>\n", argv[0]);
+    if (argc < 3) {
+        printf("[*] Usage: %s <kernelcache> <patched-kernelcache>\n", argv[0]);
         return -1;
     }
 
     printf("[*] Starting...\n");
     const char* path = argv[1];
-    int ret = open_kernelcache(path, &gKPF.kernelcache, &gKPF.kernelSize, &gKPF.kernelHeader);
+    const char* patchedPath = argv[2];
+    int ret = file_open(path, &gKPF.kernelcache, &gKPF.kernelSize, &gKPF.kernelHeader);
     if(ret != 0) {
         printf("[!] Failed to open kernelcache\n");
         return -1;
@@ -73,15 +57,20 @@ int main(int argc, char** argv) {
     uint64_t fileoff = (uint8_t*)darwin_version_addr - (uint8_t*)gKPF.kernelcache;
     uint64_t va = macho_translate_fileoff_to_va(gKPF.kernelcache, fileoff);
 
+    // Test for pf_xref64
     // uint64_t xref = pf_xref64(gKPF.kernelcache, gKPF.kernelTextSection, va);
     // if (xref == 0) return -1;
     // printf("[*] Found Darwin Kernel Version string ref at 0x%llx\n", va); // 0xfffffff00701f648
 
-    printf("[*] Initialising amfiret patch...\n");
-    int patch = kernel_patch_amfiret();
-    //if(patch != 0) return -1;
+    printf("[*] Initialising AMFI patch...\n");
+    int patch = kernel_amfi_is_cd_in_trustcache_patch();
+    if(patch != 0) {
+        printf("[!] AMFI patch failed\n");
+        return -1;
+    }
 
-    free(gKPF.kernelcache);
-    gKPF.kernelcache = NULL;
+    file_write(patchedPath, gKPF.kernelcache, gKPF.kernelSize);
+    file_close(gKPF.kernelcache);
+    printf("[*] Wrote patches to %s\n", patchedPath);
     return 0;
 }

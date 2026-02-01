@@ -12,6 +12,9 @@ all: kpf64
 kpf64: $(src_dir) $(lib)
 	$(cc) -g -I$(lib_dir) -I$(include_dir) -I$(patches_include_dir) -o $@ $(src_dir) $(patches_src_dir) $(lib)
 
+$(lib):
+	$(MAKE) -C $(lib_dir)
+
 clean:
 	rm -f kpf64
 

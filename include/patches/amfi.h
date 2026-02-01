@@ -1,8 +1,8 @@
 #ifndef amfi_h
 #define amfi_h
 
-#define RET_INSN_OPC 0xD65F03C0, 0xFFFFFFFF
+#include <mach-o/loader.h>
 
-int kernel_patch_amfiret(void);
+int kernel_amfi_is_cd_in_trustcache_patch(void);
 
 #endif /* amfi_h */
